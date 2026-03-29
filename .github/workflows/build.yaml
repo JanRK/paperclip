@@ -1,0 +1,89 @@
+name: Build and Push to GHCR
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'README.md'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Extract version
+        id: version
+        run: |
+          TAG=$(grep -oP '<!-- VERSION:\K[^ ]+(?= -->)' README.md)
+          if [ -z "$TAG" ]; then
+            echo "ERROR: No version marker found in README.md"
+            exit 1
+          fi
+          echo "Extracted version: $TAG"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Check if already built
+        id: check
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          if git tag -l | grep -qx "$TAG"; then
+            echo "Tag $TAG already exists — skipping build"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Tag $TAG not found — proceeding with build"
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Clone upstream
+        if: steps.check.outputs.skip != 'true'
+        run: |
+          git clone --depth 1 --branch ${{ steps.version.outputs.tag }} \
+            https://github.com/paperclipai/paperclip.git upstream
+
+      - name: Set up QEMU
+        if: steps.check.outputs.skip != 'true'
+        uses: docker/setup-qemu-action@v4
+
+      - name: Set up Docker Buildx
+        if: steps.check.outputs.skip != 'true'
+        uses: docker/setup-buildx-action@v4
+
+      - name: Login to GHCR
+        if: steps.check.outputs.skip != 'true'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        if: steps.check.outputs.skip != 'true'
+        uses: docker/build-push-action@v7
+        with:
+          context: upstream/
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/janrk/paperclip:${{ steps.version.outputs.tag }}
+            ghcr.io/janrk/paperclip:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Tag version
+        if: steps.check.outputs.skip != 'true'
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag "$TAG" -m "Built and pushed $TAG to GHCR"
+          git push origin "$TAG"
