@@ -1,9 +1,9 @@
 # Paperclip
 
-<!-- VERSION:v2026.525.0 -->
+<!-- VERSION:v2026.529.0 -->
 
 [![GHCR](https://img.shields.io/badge/ghcr.io-janrk%2Fpaperclip-blue?logo=github)](https://github.com/JanRK/paperclip/pkgs/container/paperclip)
-[![Version](https://img.shields.io/badge/version-v2026.525.0-blue)](https://github.com/JanRK/paperclip/pkgs/container/paperclip)
+[![Version](https://img.shields.io/badge/version-v2026.529.0-blue)](https://github.com/JanRK/paperclip/pkgs/container/paperclip)
 [![Upstream](https://img.shields.io/badge/upstream-paperclipai%2Fpaperclip-purple?logo=github)](https://github.com/paperclipai/paperclip)
 [![License](https://img.shields.io/badge/license-MIT-green)](https://github.com/paperclipai/paperclip/blob/master/LICENSE)
 
